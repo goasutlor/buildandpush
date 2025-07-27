@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Deploy Tool</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+        .content {
+            padding: 30px;
+        }
+        .deploy-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .deploy-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: transform 0.2s;
+            width: 100%;
+        }
+        .deploy-button:hover {
+            transform: translateY(-2px);
+        }
+        .deploy-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .logs {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Complete Deploy Tool</h1>
+            <p>Automated deployment pipeline for your projects</p>
+        </div>
+        
+        <div class="content">
+            <div class="deploy-section">
+                <h2>📦 Deployment</h2>
+                <p>Click the button below to start the complete deployment pipeline:</p>
+                <button id="deployBtn" class="deploy-button" onclick="startDeployment()">
+                    🚀 Start Complete Deployment
+                </button>
+            </div>
+            
+            <div id="status" style="display: none;"></div>
+            
+            <div class="logs">
+                <h3>📊 Deployment Logs</h3>
+                <div id="logOutput"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let eventSource;
+        
+        function startDeployment() {
+            const deployBtn = document.getElementById('deployBtn');
+            const statusDiv = document.getElementById('status');
+            const logOutput = document.getElementById('logOutput');
+            
+            // Disable button and show loading
+            deployBtn.disabled = true;
+            deployBtn.textContent = '⏳ Deploying...';
+            
+            // Clear previous logs
+            logOutput.innerHTML = '';
+            statusDiv.style.display = 'none';
+            
+            // Start deployment
+            fetch('/deploy', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    project_name: 'Complete_Deploy_Tool'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    showStatus('Deployment started successfully!', 'success');
+                    startLogStream();
+                } else {
+                    showStatus('Deployment failed: ' + data.message, 'error');
+                    deployBtn.disabled = false;
+                    deployBtn.textContent = '🚀 Start Complete Deployment';
+                }
+            })
+            .catch(error => {
+                showStatus('Deployment failed: ' + error.message, 'error');
+                deployBtn.disabled = false;
+                deployBtn.textContent = '🚀 Start Complete Deployment';
+            });
+        }
+        
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+            statusDiv.style.display = 'block';
+        }
+        
+        function startLogStream() {
+            if (eventSource) {
+                eventSource.close();
+            }
+            
+            eventSource = new EventSource('/logs');
+            
+            eventSource.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                if (data.message) {
+                    const logOutput = document.getElementById('logOutput');
+                    logOutput.innerHTML += data.message + '<br>';
+                    logOutput.scrollTop = logOutput.scrollHeight;
+                    
+                    // Check if deployment is complete
+                    if (data.message.includes('🎉 Complete Deploy Tool is now ready!')) {
+                        const deployBtn = document.getElementById('deployBtn');
+                        deployBtn.disabled = false;
+                        deployBtn.textContent = '🚀 Start Complete Deployment';
+                        showStatus('Deployment completed successfully!', 'success');
+                    }
+                }
+            };
+            
+            eventSource.onerror = function(event) {
+                console.error('EventSource failed:', event);
+            };
+        }
+    </script>
+</body>
+</html> 
