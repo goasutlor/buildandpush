@@ -13,7 +13,7 @@
             min-height: 100vh;
         }
         .container {
-            max-width: 800px;
+            max-width: 1200px;
             margin: 0 auto;
             background: white;
             border-radius: 10px;
@@ -31,14 +31,125 @@
             font-size: 2.5em;
             font-weight: 300;
         }
-        .content {
+        .nav-tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .nav-tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 1.1em;
+            transition: all 0.3s;
+        }
+        .nav-tab.active {
+            background: white;
+            border-bottom: 3px solid #667eea;
+            color: #667eea;
+        }
+        .nav-tab:hover {
+            background: #e9ecef;
+        }
+        .tab-content {
+            display: none;
             padding: 30px;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #495057;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            font-size: 1em;
+        }
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+        }
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .project-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 10px;
+        }
+        .project-item {
+            padding: 10px;
+            border-bottom: 1px solid #f1f3f4;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .project-item:hover {
+            background: #f8f9fa;
+        }
+        .project-item.selected {
+            background: #e3f2fd;
+            border-left: 4px solid #667eea;
+        }
+        .project-item:last-child {
+            border-bottom: none;
+        }
+        .git-badge {
+            background: #28a745;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            margin-left: 10px;
         }
         .deploy-section {
             background: #f8f9fa;
             border-radius: 8px;
             padding: 20px;
-            margin-bottom: 20px;
+            margin-top: 20px;
         }
         .deploy-button {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -68,20 +179,70 @@
             overflow-y: auto;
             margin-top: 20px;
         }
-        .status {
-            padding: 10px;
+        .project-info {
+            background: #e3f2fd;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            display: none;
+        }
+        .project-info.show {
+            display: block;
+        }
+        .debug-section {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .debug-button {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 8px 15px;
             border-radius: 5px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        .debug-content {
+            margin-top: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+            display: none;
+        }
+        .project-details, .repo-details {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+        .detail-item {
+            margin: 5px 0;
+            padding: 5px;
+            background: white;
+            border-radius: 4px;
+            border-left: 3px solid #667eea;
+        }
+        .detail-label {
+            font-weight: 600;
+            color: #495057;
+        }
+        .detail-value {
+            color: #6c757d;
+        }
+        .repo-stats {
+            display: flex;
+            gap: 10px;
             margin: 10px 0;
         }
-        .status.success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-        .status.error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
+        .stat-item {
+            background: #e3f2fd;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.9em;
         }
     </style>
 </head>
@@ -92,19 +253,104 @@
             <p>Automated deployment pipeline for your projects</p>
         </div>
         
-        <div class="content">
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="showTab('config')">⚙️ Configuration</button>
+            <button class="nav-tab" onclick="showTab('deploy')">🚀 Deploy</button>
+        </div>
+        
+        <!-- Configuration Tab -->
+        <div id="config" class="tab-content active">
+            <h2>⚙️ Configuration</h2>
+            
+            <form id="configForm">
+                <div class="form-group">
+                    <label for="github_username">GitHub Username:</label>
+                    <input type="text" id="github_username" name="github_username" value="{{ github_username }}" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="github_token">GitHub Personal Access Token:</label>
+                    <input type="password" id="github_token" name="github_token" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="selected_project">Local Project:</label>
+                    <select id="selected_project" name="selected_project">
+                        <option value="">Select a project...</option>
+                        {% for project in projects %}
+                        <option value="{{ project.name }}" {% if project.name == selected_project %}selected{% endif %}>
+                            {{ project.name }} {% if project.has_git %}<span class="git-badge">Git</span>{% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <div id="projectDetails" class="project-details" style="display: none;">
+                        <h4>📋 Project Details:</h4>
+                        <div id="projectInfoContent"></div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="selected_repository">GitHub Repository:</label>
+                    <select id="selected_repository" name="selected_repository">
+                        <option value="">Select a repository...</option>
+                    </select>
+                    <div id="repoDetails" class="repo-details" style="display: none;">
+                        <h4>📋 Repository Details:</h4>
+                        <div id="repoInfoContent"></div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="remember_credentials" name="remember_credentials" {% if remember_credentials == 'true' %}checked{% endif %}>
+                        Remember credentials
+                    </label>
+                </div>
+                
+                <button type="submit" class="btn">💾 Save Configuration</button>
+            </form>
+            
+            <div id="configStatus"></div>
+            
+            <div class="debug-section">
+                <h3>🔧 Debug Tools</h3>
+                <button class="debug-button" onclick="debugGitHub()">🔍 Debug GitHub Connection</button>
+                <button class="debug-button" onclick="loadRepositories()">📦 Load Repositories</button>
+                <button class="debug-button" onclick="browseFolders()">📁 Browse Folders</button>
+                
+                <div id="debugContent" class="debug-content"></div>
+            </div>
+        </div>
+        
+        <!-- Deploy Tab -->
+        <div id="deploy" class="tab-content">
+            <h2>🚀 Deploy</h2>
+            
             <div class="deploy-section">
-                <h2>📦 Deployment</h2>
-                <p>Click the button below to start the complete deployment pipeline:</p>
+                <h3>📦 One-Click Multi-Project Deployment:</h3>
+                <ol>
+                    <li>Make sure configuration is saved first</li>
+                    <li>Click 'Start Complete Deployment'</li>
+                    <li>Watch the real-time pipeline progress</li>
+                    <li>Get both code and Docker images updated automatically</li>
+                </ol>
+                
                 <button id="deployBtn" class="deploy-button" onclick="startDeployment()">
                     🚀 Start Complete Deployment
                 </button>
             </div>
             
-            <div id="status" style="display: none;"></div>
+            <div id="projectInfo" class="project-info">
+                <h4>📋 Selected Project Info:</h4>
+                <p><strong>Project:</strong> <span id="projectName"></span></p>
+                <p><strong>Repository:</strong> <span id="repoName"></span></p>
+                <p><strong>GitHub User:</strong> <span id="githubUser"></span></p>
+            </div>
+            
+            <div id="deployStatus"></div>
             
             <div class="logs">
-                <h3>📊 Deployment Logs</h3>
+                <h3>📊 Deployment Pipeline Logs:</h3>
                 <div id="logOutput"></div>
             </div>
         </div>
@@ -113,9 +359,228 @@
     <script>
         let eventSource;
         
+        function showTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab content
+            document.getElementById(tabName).classList.add('active');
+            
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+        }
+        
+        function showStatus(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+        
+        // Configuration form handling
+        const configForm = document.getElementById('configForm');
+        const configStatus = document.getElementById('configStatus');
+        
+        configForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(configForm);
+            
+            try {
+                const response = await fetch('/save-config', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    showStatus('configStatus', result.message, 'success');
+                    updateProjectInfo();
+                } else {
+                    showStatus('configStatus', result.message, 'error');
+                }
+            } catch (error) {
+                showStatus('configStatus', 'Failed to save configuration: ' + error.message, 'error');
+            }
+        });
+        
+        // Auto-load repositories when username and token are entered
+        document.getElementById('github_username').addEventListener('input', autoLoadRepositories);
+        document.getElementById('github_token').addEventListener('input', autoLoadRepositories);
+        
+        async function autoLoadRepositories() {
+            const username = document.getElementById('github_username').value;
+            const token = document.getElementById('github_token').value;
+            
+            if (username && token) {
+                await loadRepositories();
+            }
+        }
+        
+        async function loadRepositories() {
+            const username = document.getElementById('github_username').value;
+            const token = document.getElementById('github_token').value;
+            
+            if (!username || !token) {
+                showStatus('debugContent', 'Please enter username and token first', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/get-repositories', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        github_username: username,
+                        github_token: token
+                    })
+                });
+                
+                const data = await response.json();
+                
+                const repoSelect = document.getElementById('selected_repository');
+                repoSelect.innerHTML = '<option value="">Select a repository...</option>';
+                
+                if (data.repositories && data.repositories.length > 0) {
+                    data.repositories.forEach(repo => {
+                        const option = document.createElement('option');
+                        option.value = repo.full_name;
+                        option.textContent = repo.name;
+                        repoSelect.appendChild(option);
+                    });
+                    showStatus('debugContent', `✅ Loaded ${data.repositories.length} repositories`, 'success');
+                } else {
+                    showStatus('debugContent', '❌ No repositories found or error occurred', 'error');
+                }
+            } catch (error) {
+                showStatus('debugContent', 'Failed to load repositories: ' + error.message, 'error');
+            }
+        }
+        
+        async function browseFolders() {
+            try {
+                const response = await fetch('/browse-folders', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        base_path: 'D:\\Project1'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                let debugHtml = '<h4>📁 Folders in D:\\Project1:</h4>';
+                
+                if (data.folders && data.folders.length > 0) {
+                    data.folders.forEach(folder => {
+                        debugHtml += `<div>📁 ${folder.name} ${folder.has_git ? '<span class="git-badge">Git</span>' : ''}</div>`;
+                    });
+                } else {
+                    debugHtml += '<p>No folders found</p>';
+                }
+                
+                document.getElementById('debugContent').innerHTML = debugHtml;
+                document.getElementById('debugContent').style.display = 'block';
+            } catch (error) {
+                showStatus('debugContent', 'Failed to browse folders: ' + error.message, 'error');
+            }
+        }
+        
+        async function debugGitHub() {
+            const username = document.getElementById('github_username').value;
+            const token = document.getElementById('github_token').value;
+            
+            if (!username || !token) {
+                showStatus('debugContent', 'Please enter username and token first', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/debug-github', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        github_username: username,
+                        github_token: token
+                    })
+                });
+                
+                const data = await response.json();
+                
+                let debugHtml = '<h4>🔍 GitHub Debug Results:</h4>';
+                
+                if (data.token_valid) {
+                    debugHtml += '<div style="color: #28a745;">✅ Token is valid!</div>';
+                    if (data.user_data) {
+                        debugHtml += `<div><strong>User:</strong> ${data.user_data.login}</div>`;
+                        debugHtml += `<div><strong>Name:</strong> ${data.user_data.name || 'N/A'}</div>`;
+                        debugHtml += `<div><strong>Public Repos:</strong> ${data.user_data.public_repos}</div>`;
+                    }
+                    debugHtml += `<div><strong>Repositories Found:</strong> ${data.repos_count}</div>`;
+                    debugHtml += `<div><strong>Rate Limit Remaining:</strong> ${data.rate_limit_remaining}</div>`;
+                } else {
+                    debugHtml += '<div style="color: #dc3545;">❌ Token is invalid!</div>';
+                    if (data.user_status === 401) {
+                        debugHtml += '<div>Invalid token or token expired</div>';
+                    } else if (data.user_status === 404) {
+                        debugHtml += '<div>User not found</div>';
+                    }
+                }
+                
+                document.getElementById('debugContent').innerHTML = debugHtml;
+                document.getElementById('debugContent').style.display = 'block';
+            } catch (error) {
+                showStatus('debugContent', 'Debug failed: ' + error.message, 'error');
+            }
+        }
+        
+        function updateProjectInfo() {
+            const projectName = document.getElementById('selected_project').value;
+            const repoName = document.getElementById('selected_repository').value;
+            const githubUser = document.getElementById('github_username').value;
+            
+            if (projectName) {
+                document.getElementById('projectName').textContent = projectName;
+                document.getElementById('projectInfo').classList.add('show');
+                
+                if (repoName && githubUser) {
+                    document.getElementById('repoName').textContent = repoName;
+                    document.getElementById('githubUser').textContent = githubUser;
+                } else {
+                    document.getElementById('repoName').textContent = 'Not selected';
+                    document.getElementById('githubUser').textContent = 'Not selected';
+                }
+            } else {
+                document.getElementById('projectInfo').classList.remove('show');
+            }
+        }
+        
+        // Add event listeners for form fields
+        document.getElementById('selected_project').addEventListener('change', function() {
+            updateProjectInfo();
+            showProjectDetails();
+        });
+        document.getElementById('selected_repository').addEventListener('change', function() {
+            updateProjectInfo();
+            showRepoDetails();
+        });
+        document.getElementById('github_username').addEventListener('input', updateProjectInfo);
+        
         function startDeployment() {
             const deployBtn = document.getElementById('deployBtn');
-            const statusDiv = document.getElementById('status');
+            const deployStatus = document.getElementById('deployStatus');
             const logOutput = document.getElementById('logOutput');
             
             // Disable button and show loading
@@ -124,7 +589,7 @@
             
             // Clear previous logs
             logOutput.innerHTML = '';
-            statusDiv.style.display = 'none';
+            deployStatus.style.display = 'none';
             
             // Start deployment
             fetch('/deploy', {
@@ -133,31 +598,25 @@
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    project_name: 'Complete_Deploy_Tool'
+                    project_name: document.getElementById('selected_project').value || 'Complete_Deploy_Tool'
                 })
             })
             .then(response => response.json())
             .then(data => {
                 if (data.status === 'success') {
-                    showStatus('Deployment started successfully!', 'success');
+                    showStatus('deployStatus', 'Deployment started successfully!', 'success');
                     startLogStream();
                 } else {
-                    showStatus('Deployment failed: ' + data.message, 'error');
+                    showStatus('deployStatus', 'Deployment failed: ' + data.message, 'error');
                     deployBtn.disabled = false;
                     deployBtn.textContent = '🚀 Start Complete Deployment';
                 }
             })
             .catch(error => {
-                showStatus('Deployment failed: ' + error.message, 'error');
+                showStatus('deployStatus', 'Deployment failed: ' + error.message, 'error');
                 deployBtn.disabled = false;
                 deployBtn.textContent = '🚀 Start Complete Deployment';
             });
-        }
-        
-        function showStatus(message, type) {
-            const statusDiv = document.getElementById('status');
-            statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
-            statusDiv.style.display = 'block';
         }
         
         function startLogStream() {
@@ -179,7 +638,7 @@
                         const deployBtn = document.getElementById('deployBtn');
                         deployBtn.disabled = false;
                         deployBtn.textContent = '🚀 Start Complete Deployment';
-                        showStatus('Deployment completed successfully!', 'success');
+                        showStatus('deployStatus', 'Deployment completed successfully!', 'success');
                     }
                 }
             };
@@ -187,6 +646,123 @@
             eventSource.onerror = function(event) {
                 console.error('EventSource failed:', event);
             };
+        }
+        
+        // Initialize project info on page load
+        updateProjectInfo();
+        
+        // Show project details when page loads
+        showProjectDetails();
+        
+        function showProjectDetails() {
+            const projectSelect = document.getElementById('selected_project');
+            const projectDetails = document.getElementById('projectDetails');
+            const projectInfoContent = document.getElementById('projectInfoContent');
+            
+            if (projectSelect.value) {
+                // Find the selected project from the server data
+                const projects = {{ projects|tojson }};
+                const selectedProject = projects.find(p => p.name === projectSelect.value);
+                
+                if (selectedProject) {
+                    let html = '';
+                    html += `<div class="detail-item"><span class="detail-label">Path:</span> <span class="detail-value">${selectedProject.path}</span></div>`;
+                    html += `<div class="detail-item"><span class="detail-label">Files:</span> <span class="detail-value">${selectedProject.file_count || 0}</span></div>`;
+                    html += `<div class="detail-item"><span class="detail-label">Size:</span> <span class="detail-value">${formatBytes(selectedProject.size || 0)}</span></div>`;
+                    html += `<div class="detail-item"><span class="detail-label">Last Modified:</span> <span class="detail-value">${selectedProject.last_modified || 'Unknown'}</span></div>`;
+                    
+                    if (selectedProject.description) {
+                        html += `<div class="detail-item"><span class="detail-label">Description:</span> <span class="detail-value">${selectedProject.description}</span></div>`;
+                    }
+                    
+                    if (selectedProject.files && selectedProject.files.length > 0) {
+                        html += `<div class="detail-item"><span class="detail-label">Key Files:</span> <span class="detail-value">${selectedProject.files.join(', ')}</span></div>`;
+                    }
+                    
+                    projectInfoContent.innerHTML = html;
+                    projectDetails.style.display = 'block';
+                }
+            } else {
+                projectDetails.style.display = 'none';
+            }
+        }
+        
+        function showRepoDetails() {
+            const repoSelect = document.getElementById('selected_repository');
+            const repoDetails = document.getElementById('repoDetails');
+            const repoInfoContent = document.getElementById('repoInfoContent');
+            
+            if (repoSelect.value) {
+                const username = document.getElementById('github_username').value;
+                const token = document.getElementById('github_token').value;
+                
+                if (username && token) {
+                    fetch('/get-repository-details', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            github_username: username,
+                            github_token: token,
+                            repo_name: repoSelect.value
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            const repo = data.details;
+                            let html = '';
+                            
+                            html += `<div class="detail-item"><span class="detail-label">Full Name:</span> <span class="detail-value">${repo.full_name}</span></div>`;
+                            html += `<div class="detail-item"><span class="detail-label">Description:</span> <span class="detail-value">${repo.description || 'No description'}</span></div>`;
+                            html += `<div class="detail-item"><span class="detail-label">Language:</span> <span class="detail-value">${repo.language || 'Unknown'}</span></div>`;
+                            html += `<div class="detail-item"><span class="detail-label">Default Branch:</span> <span class="detail-value">${repo.default_branch}</span></div>`;
+                            
+                            html += '<div class="repo-stats">';
+                            html += `<div class="stat-item">⭐ ${repo.stargazers_count} stars</div>`;
+                            html += `<div class="stat-item">🍴 ${repo.forks_count} forks</div>`;
+                            html += `<div class="stat-item">📁 ${repo.size} KB</div>`;
+                            html += `<div class="stat-item">${repo.private ? '🔒 Private' : '🌐 Public'}</div>`;
+                            html += '</div>';
+                            
+                            html += `<div class="detail-item"><span class="detail-label">Created:</span> <span class="detail-value">${new Date(repo.created_at).toLocaleDateString()}</span></div>`;
+                            html += `<div class="detail-item"><span class="detail-label">Updated:</span> <span class="detail-value">${new Date(repo.updated_at).toLocaleDateString()}</span></div>`;
+                            
+                            if (repo.topics && repo.topics.length > 0) {
+                                html += `<div class="detail-item"><span class="detail-label">Topics:</span> <span class="detail-value">${repo.topics.join(', ')}</span></div>`;
+                            }
+                            
+                            if (data.contents && data.contents.length > 0) {
+                                const files = data.contents.map(item => item.name).join(', ');
+                                html += `<div class="detail-item"><span class="detail-label">Files:</span> <span class="detail-value">${files}</span></div>`;
+                            }
+                            
+                            repoInfoContent.innerHTML = html;
+                            repoDetails.style.display = 'block';
+                        } else {
+                            repoInfoContent.innerHTML = `<div class="status error">Failed to load repository details: ${data.message}</div>`;
+                            repoDetails.style.display = 'block';
+                        }
+                    })
+                    .catch(error => {
+                        repoInfoContent.innerHTML = `<div class="status error">Error loading repository details: ${error.message}</div>`;
+                        repoDetails.style.display = 'block';
+                    });
+                } else {
+                    repoDetails.style.display = 'none';
+                }
+            } else {
+                repoDetails.style.display = 'none';
+            }
+        }
+        
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }
     </script>
 </body>
