@@ -244,6 +244,121 @@
             border-radius: 15px;
             font-size: 0.9em;
         }
+        
+        /* Version Management Styles */
+        .version-section {
+            margin-bottom: 30px;
+        }
+        
+        .version-list {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            background: #f8f9fa;
+        }
+        
+        .version-item {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            position: relative;
+        }
+        
+        .version-item.current {
+            border-left: 4px solid #28a745;
+        }
+        
+        .version-item.success {
+            border-left: 4px solid #28a745;
+        }
+        
+        .version-item.error {
+            border-left: 4px solid #dc3545;
+        }
+        
+        .version-item.warning {
+            border-left: 4px solid #ffc107;
+        }
+        
+        .version-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .version-status {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+        
+        .version-status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .version-status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .version-status.warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .current-badge {
+            background: #007bff;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 8px;
+            font-size: 0.7em;
+        }
+        
+        .version-details p {
+            margin: 5px 0;
+            font-size: 0.9em;
+        }
+        
+        .rollback-section {
+            margin-top: 30px;
+        }
+        
+        .rollback-option {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .rollback-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+        
+        .rollback-btn:hover {
+            background: #c82333;
+        }
+        
+        .rollback-info {
+            font-size: 0.8em;
+            color: #6c757d;
+        }
     </style>
 </head>
 <body>
@@ -256,6 +371,7 @@
         <div class="nav-tabs">
             <button class="nav-tab active" onclick="showTab('config')">⚙️ Configuration</button>
             <button class="nav-tab" onclick="showTab('deploy')">🚀 Deploy</button>
+            <button class="nav-tab" onclick="showTab('versions')">📋 Versions</button>
         </div>
         
         <!-- Configuration Tab -->
@@ -352,6 +468,32 @@
             <div class="logs">
                 <h3>📊 Deployment Pipeline Logs:</h3>
                 <div id="logOutput"></div>
+            </div>
+        </div>
+        
+        <!-- Versions Tab -->
+        <div id="versions" class="tab-content">
+            <h2>📋 Version Management</h2>
+            
+            <div class="version-section">
+                <h3>🔄 Version History & Rollback:</h3>
+                <p>Track deployment versions and rollback to previous stable versions if needed.</p>
+                
+                <button id="loadVersionsBtn" class="deploy-button" onclick="loadVersions()">
+                    📋 Load Version History
+                </button>
+                
+                <div id="versionStatus"></div>
+            </div>
+            
+            <div class="version-history">
+                <h3>📊 Version History:</h3>
+                <div id="versionHistory" class="version-list"></div>
+            </div>
+            
+            <div class="rollback-section">
+                <h3>🔄 Rollback Options:</h3>
+                <div id="rollbackOptions" class="rollback-list"></div>
             </div>
         </div>
     </div>
@@ -656,11 +798,32 @@
                     logOutput.scrollTop = logOutput.scrollHeight;
                     
                     // Check if deployment is complete
-                    if (data.message.includes('🎉 Complete Deploy Tool is now ready!')) {
+                    if (data.message.includes('🎉 REAL Production Deployment Pipeline Completed Successfully!') || 
+                        data.message.includes('✅ Application ready for production use!') ||
+                        data.message.includes('✅ Deployment verification complete')) {
                         const deployBtn = document.getElementById('deployBtn');
                         deployBtn.disabled = false;
                         deployBtn.textContent = '🚀 Start Complete Deployment';
                         showStatus('deployStatus', 'Deployment completed successfully!', 'success');
+                        
+                        // Close the event source to stop log streaming
+                        if (eventSource) {
+                            eventSource.close();
+                        }
+                    }
+                    
+                    // Check if deployment failed
+                    if (data.message.includes('❌ REAL Deployment Pipeline failed') || 
+                        data.message.includes('❌ Deployment failed')) {
+                        const deployBtn = document.getElementById('deployBtn');
+                        deployBtn.disabled = false;
+                        deployBtn.textContent = '🚀 Start Complete Deployment';
+                        showStatus('deployStatus', 'Deployment failed - please try again', 'error');
+                        
+                        // Close the event source to stop log streaming
+                        if (eventSource) {
+                            eventSource.close();
+                        }
                     }
                 }
             };
@@ -675,6 +838,133 @@
         
         // Show project details when page loads
         showProjectDetails();
+        
+        // Version management functions
+        async function loadVersions() {
+            const username = document.getElementById('github_username').value;
+            const token = document.getElementById('github_token').value;
+            const project = document.getElementById('selected_project').value || 'Complete_Deploy_Tool';
+            
+            if (!username || !token) {
+                showStatus('versionStatus', 'Please provide GitHub credentials first', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/get-versions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        github_username: username,
+                        github_token: token,
+                        project_name: project
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    displayVersionHistory(data.versions, data.current_version);
+                    showStatus('versionStatus', 'Version history loaded successfully!', 'success');
+                } else {
+                    showStatus('versionStatus', 'Failed to load versions: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showStatus('versionStatus', 'Failed to load versions: ' + error.message, 'error');
+            }
+        }
+        
+        function displayVersionHistory(versions, currentVersion) {
+            const versionHistory = document.getElementById('versionHistory');
+            const rollbackOptions = document.getElementById('rollbackOptions');
+            
+            let historyHtml = '';
+            let rollbackHtml = '';
+            
+            versions.reverse().forEach(version => {
+                const statusClass = version.status === 'success' ? 'success' : 
+                                  version.status === 'failed' ? 'error' : 'warning';
+                const isCurrent = currentVersion && version.version_id === currentVersion.version_id;
+                
+                historyHtml += `
+                    <div class="version-item ${statusClass} ${isCurrent ? 'current' : ''}">
+                        <div class="version-header">
+                            <strong>${version.version_id}</strong>
+                            <span class="version-status ${statusClass}">${version.status}</span>
+                            ${isCurrent ? '<span class="current-badge">Current</span>' : ''}
+                        </div>
+                        <div class="version-details">
+                            <p><strong>Type:</strong> ${version.type}</p>
+                            <p><strong>Commit:</strong> ${version.commit_hash}</p>
+                            <p><strong>Branch:</strong> ${version.branch}</p>
+                            <p><strong>Timestamp:</strong> ${new Date(version.timestamp).toLocaleString()}</p>
+                            ${version.notes ? `<p><strong>Notes:</strong> ${version.notes}</p>` : ''}
+                        </div>
+                    </div>
+                `;
+                
+                // Add rollback option for successful versions
+                if (version.status === 'success' && version.rollback_available && !isCurrent) {
+                    rollbackHtml += `
+                        <div class="rollback-option">
+                            <button onclick="rollbackToVersion('${version.version_id}')" class="rollback-btn">
+                                🔄 Rollback to ${version.version_id}
+                            </button>
+                            <span class="rollback-info">
+                                Commit: ${version.commit_hash} | ${new Date(version.timestamp).toLocaleString()}
+                            </span>
+                        </div>
+                    `;
+                }
+            });
+            
+            versionHistory.innerHTML = historyHtml;
+            rollbackOptions.innerHTML = rollbackHtml || '<p>No rollback options available</p>';
+        }
+        
+        async function rollbackToVersion(targetVersionId) {
+            const username = document.getElementById('github_username').value;
+            const token = document.getElementById('github_token').value;
+            const project = document.getElementById('selected_project').value || 'Complete_Deploy_Tool';
+            
+            if (!username || !token) {
+                showStatus('versionStatus', 'Please provide GitHub credentials first', 'error');
+                return;
+            }
+            
+            if (!confirm(`Are you sure you want to rollback to version ${targetVersionId}?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/rollback', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        github_username: username,
+                        github_token: token,
+                        project_name: project,
+                        target_version_id: targetVersionId
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    showStatus('versionStatus', `Rollback to ${targetVersionId} started! Check logs for progress.`, 'success');
+                    // Reload versions after rollback
+                    setTimeout(loadVersions, 2000);
+                } else {
+                    showStatus('versionStatus', 'Rollback failed: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showStatus('versionStatus', 'Rollback failed: ' + error.message, 'error');
+            }
+        }
         
         function showProjectDetails() {
             const projectSelect = document.getElementById('selected_project');

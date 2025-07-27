@@ -478,6 +478,12 @@ def deploy():
                 github_token = data.get('github_token', '')
                 selected_repo = data.get('selected_repository', '')
                 
+                # Initialize version manager
+                from version_manager import VersionManager
+                version_manager = VersionManager(project_name, github_username, github_token)
+                current_version = version_manager.create_version('auto')
+                log_wrapper(f"📋 Created deployment version: {current_version['version_id']}")
+                
                 if not github_username or not github_token:
                     log_wrapper("❌ GitHub credentials not provided")
                     log_wrapper("💡 Please provide GitHub username and token in the form")
@@ -703,8 +709,11 @@ def deploy():
                         # Build Docker image from GitHub repository
                         # Convert project name to lowercase for Docker compatibility
                         docker_project_name = project_name.lower().replace('_', '-')
-                        image_name = f"ghcr.io/{github_username}/{docker_project_name}:latest"
+                        image_name = f"ghcr.io/{github_username}/{docker_project_name}:{current_version['version_id']}"
                         log_wrapper(f"🔨 Building Docker image from GitHub repo: {image_name}")
+                        
+                        # Update version with Docker image info
+                        version_manager.update_version_status(current_version['version_id'], 'building', f'Docker image: {image_name}')
                         
                         try:
                             result = subprocess.run([
@@ -736,7 +745,12 @@ def deploy():
                             'docker', 'push', image_name
                         ], check=True, capture_output=True, text=True)
                         log_wrapper("✅ Docker image pushed to GHCR successfully")
-                        log_wrapper(f"🐳 Docker image available at: https://github.com/{github_username}/{project_name}/packages")
+                        log_wrapper(f"🐳 Docker image available at: https://github.com/{github_username}/{docker_project_name}/packages")
+                        
+                        # Mark version as successful and available for rollback
+                        version_manager.update_version_status(current_version['version_id'], 'success', 'Deployment completed successfully')
+                        version_manager.mark_rollback_available(current_version['version_id'])
+                        log_wrapper(f"📋 Version {current_version['version_id']} marked as successful and available for rollback")
                         
                     else:
                         log_wrapper("❌ Dockerfile not found in repository")
@@ -754,9 +768,11 @@ def deploy():
                     
                 except subprocess.CalledProcessError as e:
                     log_wrapper(f"❌ Docker operation failed: {e}")
+                    version_manager.update_version_status(current_version['version_id'], 'failed', f'Docker operation failed: {e}')
                     return
                 except Exception as e:
                     log_wrapper(f"❌ Error during Docker build: {e}")
+                    version_manager.update_version_status(current_version['version_id'], 'failed', f'Docker build error: {e}')
                     # Try to clean up even if build failed
                     try:
                         os.chdir(current_dir)
@@ -845,6 +861,97 @@ def logs():
                 yield f"data: {json.dumps({'message': ''})}\n\n"
     
     return app.response_class(generate(), mimetype='text/event-stream')
+
+@app.route('/get-versions', methods=['POST'])
+def get_versions():
+    """Get version history"""
+    try:
+        data = request.get_json()
+        github_username = data.get('github_username', '')
+        github_token = data.get('github_token', '')
+        project_name = data.get('project_name', 'Complete_Deploy_Tool')
+        
+        if not github_username or not github_token:
+            return jsonify({'status': 'error', 'message': 'Username and token required'})
+        
+        from version_manager import VersionManager
+        version_manager = VersionManager(project_name, github_username, github_token)
+        versions = version_manager.get_version_history(20)  # Get last 20 versions
+        
+        return jsonify({
+            'status': 'success',
+            'versions': versions,
+            'current_version': version_manager.get_current_version()
+        })
+        
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': f'Failed to get versions: {e}'})
+
+@app.route('/rollback', methods=['POST'])
+def rollback():
+    """Rollback to a specific version"""
+    try:
+        data = request.get_json()
+        github_username = data.get('github_username', '')
+        github_token = data.get('github_token', '')
+        project_name = data.get('project_name', 'Complete_Deploy_Tool')
+        target_version_id = data.get('target_version_id', '')
+        
+        if not github_username or not github_token:
+            return jsonify({'status': 'error', 'message': 'Username and token required'})
+        
+        if not target_version_id:
+            return jsonify({'status': 'error', 'message': 'Target version ID required'})
+        
+        from version_manager import VersionManager
+        version_manager = VersionManager(project_name, github_username, github_token)
+        
+        # Get rollback info
+        rollback_info = version_manager.rollback_to_version(target_version_id)
+        
+        def rollback_process():
+            try:
+                log_wrapper(f"🔄 Starting rollback to version: {target_version_id}")
+                
+                # Checkout the target commit
+                try:
+                    subprocess.run(['git', 'checkout', rollback_info['rollback_commit']], 
+                                 check=True, capture_output=True)
+                    log_wrapper(f"✅ Checked out commit: {rollback_info['rollback_commit']}")
+                except subprocess.CalledProcessError as e:
+                    log_wrapper(f"❌ Failed to checkout commit: {e}")
+                    return
+                
+                # Push the rollback to GitHub
+                try:
+                    subprocess.run(['git', 'push', 'origin', 'main', '--force'], 
+                                 check=True, capture_output=True)
+                    log_wrapper("✅ Rollback pushed to GitHub")
+                except subprocess.CalledProcessError as e:
+                    log_wrapper(f"❌ Failed to push rollback: {e}")
+                    return
+                
+                # Update version status
+                version_manager.update_version_status(rollback_info['version_id'], 'success', f'Rollback to {target_version_id}')
+                log_wrapper(f"🎉 Rollback completed successfully to version: {target_version_id}")
+                
+            except Exception as e:
+                log_wrapper(f"❌ Rollback failed: {e}")
+                version_manager.update_version_status(rollback_info['version_id'], 'failed', f'Rollback failed: {e}')
+        
+        # Start rollback in background
+        thread = threading.Thread(target=rollback_process)
+        thread.daemon = True
+        thread.start()
+        
+        return jsonify({
+            'status': 'success',
+            'message': f'Rollback to version {target_version_id} started! Check logs for progress.',
+            'rollback_info': rollback_info
+        })
+        
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': f'Rollback failed: {e}'})
 
 @app.route('/debug-github', methods=['POST'])
 def debug_github():

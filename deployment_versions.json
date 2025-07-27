@@ -1,0 +1,18 @@
+{
+  "project": "Bulk_Vm_Provisioning",
+  "deployments": [
+    {
+      "version_id": "v20250727_194211",
+      "timestamp": "2025-07-27T19:42:11.880720",
+      "type": "auto",
+      "commit_hash": "125296e0",
+      "branch": "main",
+      "github_repo": "goasutlor/bulk-vm-provisioning",
+      "docker_image": "ghcr.io/goasutlor/bulk-vm-provisioning:v20250727_194211",
+      "status": "deploying",
+      "rollback_available": false,
+      "notes": ""
+    }
+  ],
+  "current_version": "v20250727_194211"
+}
