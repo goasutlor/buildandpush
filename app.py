@@ -698,15 +698,22 @@ def deploy():
                     dockerfile_path = os.path.join(temp_dir, 'Dockerfile')
                     if os.path.exists(dockerfile_path):
                         log_wrapper("✅ Found Dockerfile in repository")
+                        log_wrapper(f"📁 Dockerfile path: {dockerfile_path}")
                         
                         # Build Docker image from GitHub repository
                         image_name = f"ghcr.io/{github_username}/{project_name}:latest"
                         log_wrapper(f"🔨 Building Docker image from GitHub repo: {image_name}")
                         
-                        result = subprocess.run([
-                            'docker', 'build', '-t', image_name, '.'
-                        ], check=True, capture_output=True, text=True)
-                        log_wrapper("✅ Docker image built successfully from GitHub repository")
+                        try:
+                            result = subprocess.run([
+                                'docker', 'build', '-t', image_name, '.'
+                            ], check=True, capture_output=True, text=True)
+                            log_wrapper("✅ Docker image built successfully from GitHub repository")
+                        except subprocess.CalledProcessError as e:
+                            log_wrapper(f"❌ Docker build failed with exit code {e.returncode}")
+                            log_wrapper(f"📋 Docker build output: {e.stdout}")
+                            log_wrapper(f"❌ Docker build error: {e.stderr}")
+                            raise
                         
                         # Login to GHCR
                         log_wrapper("🔐 Logging in to GitHub Container Registry...")
@@ -730,8 +737,10 @@ def deploy():
                         log_wrapper(f"🐳 Docker image available at: https://github.com/{github_username}/{project_name}/packages")
                         
                     else:
-                        log_wrapper("⚠️ No Dockerfile found in GitHub repository")
-                        log_wrapper("💡 Please add a Dockerfile to your repository to enable Docker builds")
+                        log_wrapper("❌ Dockerfile not found in repository")
+                        log_wrapper(f"📁 Checking directory contents: {os.listdir(temp_dir)}")
+                        log_wrapper("💡 Please ensure Dockerfile is committed and pushed to the repository")
+                        return
                     
                     # Clean up temporary directory
                     try:
