@@ -245,6 +245,46 @@ def get_repository_details(github_username, github_token, repo_name):
             'message': f'Error fetching repository details: {e}'
         }
 
+def create_github_repository(github_username, github_token, repo_name, description="", private=False):
+    """Create a new GitHub repository"""
+    try:
+        import requests
+        
+        headers = {
+            'Authorization': f'token {github_token}',
+            'Accept': 'application/vnd.github.v3+json'
+        }
+        
+        data = {
+            'name': repo_name.split('/')[-1],  # Get just the repo name, not full path
+            'description': description,
+            'private': private,
+            'auto_init': True,  # Initialize with README
+            'gitignore_template': 'Python'
+        }
+        
+        url = f'https://api.github.com/user/repos'
+        response = requests.post(url, headers=headers, json=data, timeout=10)
+        
+        if response.status_code == 201:
+            repo = response.json()
+            return {
+                'status': 'success',
+                'message': f'Repository {repo_name} created successfully',
+                'repo': repo
+            }
+        else:
+            return {
+                'status': 'error',
+                'message': f'Failed to create repository: {response.status_code} - {response.text}'
+            }
+            
+    except Exception as e:
+        return {
+            'status': 'error',
+            'message': f'Error creating repository: {e}'
+        }
+
 @app.route('/')
 def index():
     config = load_config()
@@ -371,6 +411,26 @@ def get_repository_details_route():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)})
 
+@app.route('/create-repository', methods=['POST'])
+def create_repository_route():
+    """API endpoint to create a new GitHub repository"""
+    try:
+        data = request.get_json()
+        github_username = data.get('github_username', '')
+        github_token = data.get('github_token', '')
+        repo_name = data.get('repo_name', '')
+        description = data.get('description', '')
+        private = data.get('private', False)
+        
+        if not github_username or not github_token or not repo_name:
+            return jsonify({'status': 'error', 'message': 'Missing required parameters'})
+        
+        result = create_github_repository(github_username, github_token, repo_name, description, private)
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+
 @app.route('/save-config', methods=['POST'])
 def save_config_route():
     """API endpoint to save configuration"""
@@ -421,6 +481,21 @@ def deploy():
                 if not selected_repo:
                     log_wrapper("❌ No GitHub repository selected")
                     return
+                
+                # Check if repository exists, create if it doesn't
+                log_wrapper(f"🔍 Checking if repository {selected_repo} exists...")
+                repo_details = get_repository_details(github_username, github_token, selected_repo)
+                if repo_details['status'] != 'success':
+                    log_wrapper(f"⚠️ Repository {selected_repo} does not exist, creating it...")
+                    create_result = create_github_repository(github_username, github_token, selected_repo, 
+                                                          f"Auto-created repository for {project_name}", False)
+                    if create_result['status'] == 'success':
+                        log_wrapper(f"✅ Repository {selected_repo} created successfully")
+                    else:
+                        log_wrapper(f"❌ Failed to create repository: {create_result['message']}")
+                        return
+                else:
+                    log_wrapper(f"✅ Repository {selected_repo} exists")
                 
                 # Get current directory (should be the project directory)
                 current_dir = os.getcwd()
@@ -491,14 +566,31 @@ def deploy():
                         
                         # Push to GitHub
                         try:
+                            # First try to pull any remote changes
+                            try:
+                                subprocess.run(['git', 'pull', 'origin', 'main', '--rebase'], 
+                                             check=True, capture_output=True)
+                                log_wrapper("✅ Pulled latest changes from remote")
+                            except subprocess.CalledProcessError:
+                                log_wrapper("⚠️ Could not pull from remote, proceeding with push")
+                            
+                            # Push to GitHub
                             subprocess.run(['git', 'push', '-u', 'origin', 'main'], 
                                          check=True, capture_output=True)
                             log_wrapper("✅ Pushed code to GitHub repository")
                             log_wrapper(f"📦 Code available at: https://github.com/{selected_repo}")
                         except subprocess.CalledProcessError as e:
                             log_wrapper(f"❌ Push failed: {e}")
-                            log_wrapper("💡 Please check your GitHub token and repository permissions")
-                            return
+                            log_wrapper("💡 Trying force push as fallback...")
+                            try:
+                                subprocess.run(['git', 'push', '-u', 'origin', 'main', '--force'], 
+                                             check=True, capture_output=True)
+                                log_wrapper("✅ Force pushed code to GitHub repository")
+                                log_wrapper(f"📦 Code available at: https://github.com/{selected_repo}")
+                            except subprocess.CalledProcessError as e2:
+                                log_wrapper(f"❌ Force push also failed: {e2}")
+                                log_wrapper("💡 Please check your GitHub token and repository permissions")
+                                return
                     else:
                         log_wrapper("ℹ️ No changes to commit")
                         
