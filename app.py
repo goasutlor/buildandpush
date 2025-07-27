@@ -19,7 +19,11 @@ def log_wrapper(message):
     log_message = f"[{timestamp}] {message}"
     with log_lock:
         log_queue.append(log_message)
-    print(log_message)
+    try:
+        print(log_message)
+    except UnicodeEncodeError:
+        # Handle Unicode characters in Windows console
+        print(log_message.encode('utf-8', errors='replace').decode('utf-8'))
 
 def load_config():
     """Load configuration from config.ini"""
@@ -534,6 +538,22 @@ def deploy():
                 
                 # Step 2: Push Code to GitHub Repository
                 log_wrapper("📝 Step 2: Pushing Code to GitHub Repository...")
+                
+                # Test Git authentication first
+                log_wrapper("🔐 Testing Git authentication...")
+                try:
+                    test_url = f"https://{github_username}:{github_token}@github.com/{selected_repo}.git"
+                    subprocess.run(['git', 'ls-remote', test_url], 
+                                 check=True, capture_output=True, timeout=30)
+                    log_wrapper("✅ Git authentication successful")
+                except subprocess.CalledProcessError as e:
+                    log_wrapper(f"❌ Git authentication failed: {e}")
+                    log_wrapper("💡 Please check your GitHub token permissions")
+                    return
+                except subprocess.TimeoutExpired:
+                    log_wrapper("❌ Git authentication timed out")
+                    return
+                
                 try:
                     # Check git status
                     result = subprocess.run(['git', 'status', '--porcelain'], 
@@ -552,44 +572,95 @@ def deploy():
                                      check=True, capture_output=True)
                         log_wrapper("✅ Committed changes")
                         
-                        # Check if remote exists
+                        # Check if remote exists and update with token
                         try:
                             remote_result = subprocess.run(['git', 'remote', '-v'], 
                                                         capture_output=True, text=True, check=True)
                             if not remote_result.stdout.strip():
                                 log_wrapper("🔗 Setting up remote repository...")
-                                subprocess.run(['git', 'remote', 'add', 'origin', f'https://github.com/{selected_repo}.git'], 
+                                # Use token in remote URL for authentication
+                                remote_url = f"https://{github_username}:{github_token}@github.com/{selected_repo}.git"
+                                subprocess.run(['git', 'remote', 'add', 'origin', remote_url], 
                                              check=True, capture_output=True)
-                                log_wrapper("✅ Remote repository configured")
+                                log_wrapper("✅ Remote repository configured with token")
+                            else:
+                                log_wrapper("🔗 Updating remote with token authentication...")
+                                # Update existing remote with token
+                                remote_url = f"https://{github_username}:{github_token}@github.com/{selected_repo}.git"
+                                subprocess.run(['git', 'remote', 'set-url', 'origin', remote_url], 
+                                             check=True, capture_output=True)
+                                log_wrapper("✅ Remote updated with token authentication")
                         except subprocess.CalledProcessError:
-                            log_wrapper("⚠️ Could not check remote, proceeding with push...")
+                            log_wrapper("⚠️ Could not configure remote, proceeding with push...")
                         
-                        # Push to GitHub
+                        # Push to GitHub with token authentication
                         try:
+                            # Configure Git to use token for authentication
+                            log_wrapper("🔐 Configuring Git authentication...")
+                            
+                            # Set up credential helper to use token
+                            subprocess.run(['git', 'config', 'credential.helper', 'store'], 
+                                         check=True, capture_output=True)
+                            
+                            # Create credential file with token
+                            import tempfile
+                            
+                            # Create a temporary credential file
+                            cred_file = tempfile.NamedTemporaryFile(mode='w', delete=False)
+                            cred_file.write(f"https://{github_username}:{github_token}@github.com\n")
+                            cred_file.close()
+                            
+                            # Set the credential file
+                            os.environ['GIT_ASKPASS'] = 'echo'
+                            os.environ['GIT_TERMINAL_PROMPT'] = '0'
+                            
                             # First try to pull any remote changes
                             try:
                                 subprocess.run(['git', 'pull', 'origin', 'main', '--rebase'], 
-                                             check=True, capture_output=True)
+                                             check=True, capture_output=True, env=dict(os.environ, GIT_ASKPASS='echo'))
                                 log_wrapper("✅ Pulled latest changes from remote")
                             except subprocess.CalledProcessError:
                                 log_wrapper("⚠️ Could not pull from remote, proceeding with push")
                             
-                            # Push to GitHub
-                            subprocess.run(['git', 'push', '-u', 'origin', 'main'], 
-                                         check=True, capture_output=True)
-                            log_wrapper("✅ Pushed code to GitHub repository")
-                            log_wrapper(f"📦 Code available at: https://github.com/{selected_repo}")
+                            # Push to GitHub with token authentication
+                            push_url = f"https://{github_username}:{github_token}@github.com/{selected_repo}.git"
+                            log_wrapper("📤 Pushing to GitHub with token authentication...")
+                            
+                            # Try simple push first
+                            try:
+                                subprocess.run(['git', 'push', push_url, 'main'], 
+                                             check=True, capture_output=True)
+                                log_wrapper("✅ Pushed code to GitHub repository")
+                                log_wrapper(f"📦 Code available at: https://github.com/{selected_repo}")
+                            except subprocess.CalledProcessError:
+                                log_wrapper("⚠️ Simple push failed, trying with --force-with-lease...")
+                                subprocess.run(['git', 'push', push_url, 'main', '--force-with-lease'], 
+                                             check=True, capture_output=True)
+                                log_wrapper("✅ Force-with-lease push successful")
+                                log_wrapper(f"📦 Code available at: https://github.com/{selected_repo}")
+                            
+                            # Clean up credential file
+                            os.unlink(cred_file.name)
+                            
                         except subprocess.CalledProcessError as e:
                             log_wrapper(f"❌ Push failed: {e}")
-                            log_wrapper("💡 Trying force push as fallback...")
+                            log_wrapper("💡 Trying alternative authentication method...")
                             try:
-                                subprocess.run(['git', 'push', '-u', 'origin', 'main', '--force'], 
+                                # Try with force push and explicit token
+                                push_url = f"https://{github_username}:{github_token}@github.com/{selected_repo}.git"
+                                subprocess.run(['git', 'push', push_url, 'main', '--force'], 
                                              check=True, capture_output=True)
                                 log_wrapper("✅ Force pushed code to GitHub repository")
                                 log_wrapper(f"📦 Code available at: https://github.com/{selected_repo}")
+                                
+                                # Clean up credential file
+                                if 'cred_file' in locals():
+                                    os.unlink(cred_file.name)
+                                    
                             except subprocess.CalledProcessError as e2:
                                 log_wrapper(f"❌ Force push also failed: {e2}")
                                 log_wrapper("💡 Please check your GitHub token and repository permissions")
+                                log_wrapper("💡 Make sure your token has 'repo' permissions")
                                 return
                     else:
                         log_wrapper("ℹ️ No changes to commit")
