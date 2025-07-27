@@ -685,7 +685,8 @@ def deploy():
                     clone_url = f"https://github.com/{selected_repo}.git"
                     log_wrapper(f"📥 Cloning repository: {clone_url}")
                     
-                    subprocess.run(['git', 'clone', clone_url, temp_dir], 
+                    # Use shallow clone to avoid permission issues
+                    subprocess.run(['git', 'clone', '--depth', '1', clone_url, temp_dir], 
                                  check=True, capture_output=True)
                     log_wrapper("✅ Repository cloned successfully")
                     
@@ -733,15 +734,25 @@ def deploy():
                         log_wrapper("💡 Please add a Dockerfile to your repository to enable Docker builds")
                     
                     # Clean up temporary directory
-                    os.chdir(current_dir)  # Go back to original directory
-                    shutil.rmtree(temp_dir)
-                    log_wrapper("🧹 Cleaned up temporary directory")
+                    try:
+                        os.chdir(current_dir)  # Go back to original directory
+                        shutil.rmtree(temp_dir)
+                        log_wrapper("🧹 Cleaned up temporary directory")
+                    except Exception as cleanup_error:
+                        log_wrapper(f"⚠️ Warning: Could not clean up temporary directory: {cleanup_error}")
                     
                 except subprocess.CalledProcessError as e:
                     log_wrapper(f"❌ Docker operation failed: {e}")
                     return
                 except Exception as e:
                     log_wrapper(f"❌ Error during Docker build: {e}")
+                    # Try to clean up even if build failed
+                    try:
+                        os.chdir(current_dir)
+                        if os.path.exists(temp_dir):
+                            shutil.rmtree(temp_dir)
+                    except:
+                        pass
                     return
                 
                 # Step 4: Deployment Verification
