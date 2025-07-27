@@ -701,7 +701,9 @@ def deploy():
                         log_wrapper(f"📁 Dockerfile path: {dockerfile_path}")
                         
                         # Build Docker image from GitHub repository
-                        image_name = f"ghcr.io/{github_username}/{project_name}:latest"
+                        # Convert project name to lowercase for Docker compatibility
+                        docker_project_name = project_name.lower().replace('_', '-')
+                        image_name = f"ghcr.io/{github_username}/{docker_project_name}:latest"
                         log_wrapper(f"🔨 Building Docker image from GitHub repo: {image_name}")
                         
                         try:
@@ -807,7 +809,7 @@ def deploy():
                 if os.path.exists(dockerfile_path):
                     log_wrapper("🐳 Docker image built from GitHub repository")
                     log_wrapper(f"📦 Docker image pushed to GHCR")
-                    log_wrapper(f"🐳 Container Registry: https://github.com/{github_username}/{project_name}/packages")
+                    log_wrapper(f"🐳 Container Registry: https://github.com/{github_username}/{docker_project_name}/packages")
                 log_wrapper("✅ Application ready for production use!")
                 
             except Exception as e:
