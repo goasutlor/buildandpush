@@ -591,6 +591,25 @@
             logOutput.innerHTML = '';
             deployStatus.style.display = 'none';
             
+            // Get credentials from form
+            const github_username = document.getElementById('github_username').value;
+            const github_token = document.getElementById('github_token').value;
+            const selected_repository = document.getElementById('selected_repository').value;
+            
+            if (!github_username || !github_token) {
+                showStatus('deployStatus', 'Please provide GitHub username and token', 'error');
+                deployBtn.disabled = false;
+                deployBtn.textContent = '🚀 Start Complete Deployment';
+                return;
+            }
+            
+            if (!selected_repository) {
+                showStatus('deployStatus', 'Please select a GitHub repository', 'error');
+                deployBtn.disabled = false;
+                deployBtn.textContent = '🚀 Start Complete Deployment';
+                return;
+            }
+            
             // Start deployment
             fetch('/deploy', {
                 method: 'POST',
@@ -598,7 +617,10 @@
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    project_name: document.getElementById('selected_project').value || 'Complete_Deploy_Tool'
+                    project_name: document.getElementById('selected_project').value || 'Complete_Deploy_Tool',
+                    github_username: github_username,
+                    github_token: github_token,
+                    selected_repository: selected_repository
                 })
             })
             .then(response => response.json())

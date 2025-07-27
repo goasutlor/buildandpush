@@ -5,6 +5,7 @@ import threading
 import time
 import json
 import configparser
+import requests
 from datetime import datetime
 
 app = Flask(__name__)
@@ -472,18 +473,19 @@ def deploy():
                 log_wrapper("🚀 Starting REAL Production Deployment Pipeline...")
                 log_wrapper(f"📦 Project: {project_name}")
                 
-                # Get configuration
-                config = load_config()
-                github_username = config['DEFAULT'].get('github_username', '')
-                github_token = config['DEFAULT'].get('github_token', '')
-                selected_repo = config['DEFAULT'].get('selected_repository', '')
+                # Get credentials from form data
+                github_username = data.get('github_username', '')
+                github_token = data.get('github_token', '')
+                selected_repo = data.get('selected_repository', '')
                 
                 if not github_username or not github_token:
-                    log_wrapper("❌ GitHub credentials not configured")
+                    log_wrapper("❌ GitHub credentials not provided")
+                    log_wrapper("💡 Please provide GitHub username and token in the form")
                     return
                 
                 if not selected_repo:
                     log_wrapper("❌ No GitHub repository selected")
+                    log_wrapper("💡 Please select a repository")
                     return
                 
                 # Check if repository exists, create if it doesn't
